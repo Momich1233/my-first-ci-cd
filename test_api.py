@@ -1,30 +1,20 @@
 import requests
+import pytest  # Импортируем сам pytest для доступа к декораторам
 
-def test_create_post_successfully():
-    # 1. Arrange (Готовим URL и данные, которые хотим отправить)
-    url = "https://jsonplaceholder.typicode.com/posts"
+# Вешаем декоратор параметризации. 
+# Первый аргумент — имя переменной, которая будет меняться.
+# Второй аргумент — список значений, которые будут подставляться по очереди.
+@pytest.mark.parametrize("user_id", [1, 2, 5, 10])
+def test_get_different_users(user_id):
+    # Переменная {user_id} подставится в строку динамически
+    url = f"https://jsonplaceholder.typicode.com/users/{user_id}"
     
-    payload = {
-        "title": "Мой крутой автотест",
-        "body": "Docker и CI/CD уже работают!",
-        "userId": 1
-    }
+    response = requests.get(url)
     
-    # 2. Act (Отправляем POST-запрос на сервер)
-    response = requests.post(url, json=payload)
+    # Проверяем, что сервер на все эти ID отвечает успешным кодом 200
+    assert response.status_code == 200
     
-    # 3. Assert (Проверяем результаты)
-    
-    # Сервер при успешном создании объекта должен вернуть статус-код 201 (Created)
-    assert response.status_code == 201, f"Неверный статус код: {response.status_code}"
-    
-    # Парсим ответ от сервера в формат JSON (в Python это станет обычным словарем)
     response_data = response.json()
-    
-    # Проверяем, что сервер вернул нам те же данные, что мы отправляли
-    assert response_data["title"] == payload["title"]
-    assert response_data["body"] == payload["body"]
-    
-    # Проверяем, что сервер присвоил нашему посту уникальный ID
-    assert "id" in response_data
-    print(f"\n✅ Сервер успешно создал пост с ID: {response_data['id']}")
+    # Проверяем, что сервер вернул данные именно того юзера, которого мы просили
+    assert response_data["id"] == user_id
+    print(f"\n👤 Успешно проверили пользователя с ID: {user_id}, его имя: {response_data['name']}")
