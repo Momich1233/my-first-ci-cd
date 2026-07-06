@@ -1,26 +1,28 @@
-# 1. Как будет называться наш процесс в интерфейсе GitHub
 name: Проверка кода при пуше
 
-# 2. Триггер: когда запускать робота?
-on: [push] # Запускать при каждом 'git push' (когда мы отправляем код на сайт)
+on: [push]
 
-# 3. Список задач, которые должен сделать робот
 jobs:
-  run-tests: # Название нашей задачи (можно любое английское слово)
-    # На каком компьютере запускать? 
-    # GitHub бесплатно выделяет нам в облаке свой сервер на базе чистой Ubuntu Linux!
+  run-tests:
     runs-on: ubuntu-latest
 
-    # Пошаговый план действий для этого компьютера:
     steps:
-      # Шаг 2.1: Скачиваем наш код из репозитория на этот облачный компьютер
       - name: Копируем код из Git в облако
-        uses: actions/checkout@v4 # Это готовый стандартный скрипт от GitHub
+        uses: actions/checkout@v4
 
-      # Шаг 2.2: Собираем Docker-образ (точно так же, как ты делал в PowerShell!)
-      - name: Собираем Докер-образ
-        run: docker build -t my-python-app .
+      # Изменение 1: Мы запускаем тесты и просим pytest сгенерировать HTML-отчёт внутри контейнера.
+      # Чтобы вытащить файл из контейнера на диск виртуальной машины, мы используем команду docker cp.
+      - name: Запускаем автотесты и сохраняем отчёт
+        run: |
+          docker build -t my-python-app .
+          docker run --name my-container my-python-app pytest --html=report.html --self-contained-html || true
+          docker cp my-container:/app/report.html ./report.html
 
-      # Шаг 2.3: Запускаем тесты внутри собранного контейнера
-      - name: Запускаем автотесты
-        run: docker run my-python-app pytest
+      # Изменение 2: Специальный готовый робот от GitHub, который берет файл report.html и сохраняет его в артефакты сборки.
+      # Этот шаг сработает ВСЕГДА (даже если тесты упали), благодаря строчке always()
+      - name: Загружаем HTML отчёт в артефакты GitHub
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-html-report # Как будет называться архив на сайте
+          path: ./report.html      # Какой файл забрать
